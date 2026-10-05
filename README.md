@@ -1,6 +1,6 @@
 # PS5 Portal High Bitrate
 
-**Community preview: Windows / Linux automation + optional Proxmox / Docker deployment.** [Download v0.3.0-preview.3](https://github.com/atameric/ps5-portal-high-bitrate/releases/tag/v0.3.0-preview.3). [Automatic setup (EN)](AUTOMATION.md) | [Otomatik kurulum (TR)](AUTOMATION.tr.md) | [Container setup (experimental)](deploy/README.md). Includes Windows manual launchers and an always-on one-way relay with Windows Task Scheduler / Linux systemd installers. SDNick484 contributed Alpine LXC/OpenRC and Linux Docker macvlan packaging. Windows automation validation is pending; Linux/Pi reboot and reconnect success and Proxmox real-device success have community reports. Docker has synthetic tests only. Read the Proxmox NIC firewall scope before installing. The owner confirmed the original Mac mini automation prototype; this portable implementation still needs platform testing. No 4K or guaranteed latency improvement.
+**Community preview: Windows / Linux automation + optional Proxmox / Docker deployment.** [Download v0.3.0-preview.3](https://github.com/atameric/ps5-portal-high-bitrate/releases/tag/v0.3.0-preview.3). [自动安装(中文)](AUTOMATION.zh.md) | [Automatic setup (EN)](AUTOMATION.md) | [Otomatik kurulum (TR)](AUTOMATION.tr.md) | [Container setup (experimental)](deploy/README.md). Includes Windows manual launchers and an always-on one-way relay with Windows Task Scheduler / Linux systemd installers. SDNick484 contributed Alpine LXC/OpenRC and Linux Docker macvlan packaging. Windows automation validation is pending; Linux/Pi reboot and reconnect success and Proxmox real-device success have community reports. Docker has synthetic tests only. Read the Proxmox NIC firewall scope before installing. The owner confirmed the original Mac mini automation prototype; this portable implementation still needs platform testing. No 4K or guaranteed latency improvement.
 
 The following sections describe the **macOS manual launcher**. For Windows manual mode use [WINDOWS.md](WINDOWS.md); for Linux or automatic mode use the guides above.
 
@@ -8,7 +8,7 @@ Experimental **macOS** launcher for temporarily requesting a higher PS5 Remote P
 
 **This is not a jailbreak, a 4K unlock, or a guaranteed latency improvement.** A single Portal running firmware **7.1.7** was tested. Other firmware, network layouts and consoles are unverified. The tool matches a recorded packet layout, not a verified firmware identity; a matching packet length alone does not guarantee compatible plaintext offsets.
 
-[Türkçe kullanım](README.tr.md)
+[简体中文说明](README.zh.md) | [Türkçe kullanım](README.tr.md) | [English](README.md)
 
 ## Observed results
 

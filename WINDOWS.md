@@ -2,7 +2,7 @@
 
 For the new always-on preview, use [AUTOMATION.md](AUTOMATION.md). This guide covers bounded manual sessions only.
 
-See [Turkish test instructions](WINDOWS.tr.md). This preview shares the macOS packet transform but uses Npcap on native Windows 10/11. It has not been run on Windows hardware yet. Do not describe local offline tests as Windows runtime validation.
+See [简体中文说明](WINDOWS.zh.md) | [Turkish test instructions](WINDOWS.tr.md). This preview shares the macOS packet transform but uses Npcap on native Windows 10/11. It has not been run on Windows hardware yet. Do not describe local offline tests as Windows runtime validation.
 
 Install [Python 3.10+](https://www.python.org/downloads/windows/) with the `py` launcher (verify with `py -3 --version`) and [Npcap](https://npcap.com/#download), then extract the entire ZIP and run `Setup-Windows.cmd`. Following Scapy’s installation guidance, leave WinPcap compatibility mode unchecked; monitor/raw 802.11 support is not needed. Administrator-only Npcap access is compatible with the elevated launchers. Use only your own two devices on one directly connected LAN; the selected adapter must have IPv4 forwarding disabled. No firewall, registry or IP forwarding settings are changed.
 
