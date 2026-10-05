@@ -25,6 +25,8 @@
 
 一位 [Linux 测试者](https://www.reddit.com/r/PlaystationPortal/comments/1wtyglf/comment/pd2k5ls/) 报告在 EndeavourOS 和树莓派 OS / Pi 3B(有线以太网)上成功,包括 systemd 开机自启、Portal 全新重连,以及 PS5 从待机唤醒时使用 100 Mbps 档位。Docker 与 IP 转发的冲突以及仍未覆盖的测试空白,见[自动模式说明](AUTOMATION.zh.md)中的「社区 Linux 反馈」一节。这属于社区反馈,不是吞吐或延迟基准。
 
+更多各平台的社区实测、失败案例与需求清单,见[社区讨论知识库](COMMUNITY-KNOWLEDGE.zh.md)。
+
 ## 前提条件
 
 - macOS,Python 3.10 或更高版本,具备 `sudo` 权限,以及系统自带的 `tcpdump`。
