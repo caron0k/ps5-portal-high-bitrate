@@ -14,7 +14,7 @@ def main():
         raise SystemExit('Native Linux and sudo required')
     c = auto.config(ROOT / 'auto-config.json')
     if not auto.baseline_valid(c, ROOT / 'auto-runtime'):
-        raise SystemExit('Run configure and baseline successfully first')
+        raise SystemExit('Run configure, baseline and confirm-baseline successfully first')
     if input('Was the baseline picture and control response usable? Type YES: ') != 'YES':
         raise SystemExit('Installation cancelled')
     target = Path('/opt/portal-bitrate-auto')
@@ -30,7 +30,11 @@ def main():
     for name in names:
         shutil.copyfile(ROOT / name, target / name)
         (target / name).chmod(0o600)
-    shutil.copyfile(ROOT / 'auto-runtime/auto-baseline.json', runtime / 'auto-baseline.json')
+    # Both receipts travel with the service: it reads its own runtime, and an
+    # unconfirmed baseline would leave the unit restarting and doing nothing.
+    for name in ('auto-baseline.json', 'auto-baseline-confirmed.json'):
+        shutil.copyfile(ROOT / 'auto-runtime' / name, runtime / name)
+        (runtime / name).chmod(0o600)
     subprocess.run([sys.executable, '-m', 'venv', str(target / '.venv')], check=True)
     subprocess.run([str(target / '.venv/bin/python'), '-m', 'pip', 'install', '-r', str(target / 'requirements.txt')], check=True)
     unit = Path('/etc/systemd/system/portal-bitrate-auto.service')

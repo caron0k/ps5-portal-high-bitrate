@@ -54,11 +54,51 @@ def fingerprint(c):
     return digest.hexdigest()
 
 
+def baseline_receipt(c, counts, errors, runtime):
+    """Assemble what a baseline may honestly vouch for.
+
+    Two independent witnesses license a mutation later: this process saw no
+    restoration error, and the guardian wrote its own clean hand-back receipt
+    for exactly this run. Either may veto, and an absent guardian receipt is a
+    veto rather than a pass.
+    """
+    handback = handed_back(runtime)
+    return {'time': utc(), 'fingerprint': fingerprint(c),
+            'forwarded_out': counts['forwarded_out'], 'restored': not errors and handback,
+            'restoration_errors': list(errors), 'guardian_handback_verified': handback,
+            'limit': 'Transport observed, not proof of picture quality or input responsiveness.'}
+
+
+def handed_back(runtime):
+    """True only when the guardian itself reported an uneventful ARP hand-back."""
+    try:
+        recovery = json.loads((runtime / 'recovery.json').read_text())
+        return recovery.get('reason') == 'relay_closed' and recovery.get('errors') == []
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def baseline_confirmed(c, runtime):
+    """Human eyes confirmed picture and controls during the stored baseline."""
+    try:
+        receipt = json.loads((runtime / 'auto-baseline.json').read_text())
+        confirmed = json.loads((runtime / 'auto-baseline-confirmed.json').read_text())
+        return confirmed['fingerprint'] == receipt['fingerprint'] and confirmed['time'] >= receipt['time']
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
 def baseline_valid(c, runtime):
     try:
         receipt = json.loads((runtime / 'auto-baseline.json').read_text())
-        return receipt['fingerprint'] == fingerprint(c) and receipt['forwarded_out'] > 0 and receipt['restored'] is True
-    except (OSError, ValueError, KeyError, TypeError):
+    except (OSError, ValueError):
+        return False
+    try:
+        # 'restored' has to be the measured guardian verdict, not an assumption
+        # inherited from reaching the end of run(). Both ends must agree.
+        return (receipt['fingerprint'] == fingerprint(c) and receipt['forwarded_out'] > 0
+                and receipt['restored'] is True and baseline_confirmed(c, runtime))
+    except (KeyError, TypeError):
         return False
 
 
@@ -148,7 +188,11 @@ def run(c, runtime, active=True, seconds=None):
     if (runtime / 'recovery-required').exists():
         raise RuntimeError('Previous relay recovery is unconfirmed. Run repair before restarting.')
     if active and not baseline_valid(c, runtime):
-        raise RuntimeError('Run a successful baseline with this config/version first.')
+        detail = ('Baseline relayed bytes, but nobody has confirmed the picture yet. '
+                  'Run the confirm-baseline command with this same configuration.'
+                  if (runtime / 'auto-baseline.json').exists()
+                  else 'Run a successful baseline with this config/version first.')
+        raise RuntimeError(detail)
     state = net.state_for(c)
     probe.network = net
     probe.PATCH_DELTA = PROFILES[c['profile']]
@@ -167,6 +211,9 @@ def run(c, runtime, active=True, seconds=None):
     for sig in (signal.SIGINT, signal.SIGTERM):
         signal.signal(sig, stop)
     try:
+        # The stored recovery receipt must describe this run, never an older one,
+        # otherwise a stale clean receipt could license a new baseline.
+        (runtime / 'recovery.json').unlink(missing_ok=True)
         atomic_json(runtime / 'restore-state.json', state)
         (runtime / 'recovery-required').write_text(str(os.getpid()))
         filt = f'ether dst {state["own_mac"]} and ether src {state["portal_mac"]} and ip and src host {net.PORTAL} and dst host {net.PS5}'
@@ -261,9 +308,7 @@ def run(c, runtime, active=True, seconds=None):
         if errors:
             raise RuntimeError('; '.join(errors))
     if not active and counts['forwarded_out']:
-        atomic_json(runtime / 'auto-baseline.json', {'time': utc(), 'fingerprint': fingerprint(c),
-                    'forwarded_out': counts['forwarded_out'], 'restored': True,
-                    'limit': 'Transport observed, not proof of picture quality or input responsiveness.'})
+        atomic_json(runtime / 'auto-baseline.json', baseline_receipt(c, counts, errors, runtime))
     return dict(counts)
 
 
@@ -285,7 +330,7 @@ def choose_windows_interface():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['configure', 'baseline', 'run', 'stop', 'status', 'repair', 'guardian', 'verify-baseline'])
+    parser.add_argument('command', choices=['configure', 'baseline', 'confirm-baseline', 'run', 'stop', 'status', 'repair', 'guardian', 'verify-baseline'])
     parser.add_argument('--config', type=Path, default=ROOT / 'auto-config.json')
     parser.add_argument('--runtime', type=Path, default=ROOT / 'auto-runtime')
     parser.add_argument('--profile', choices=PROFILES, default='65')
@@ -338,6 +383,29 @@ def main():
         if sys.platform != 'win32':
             Path('/var/run/portal-lab-capture.lock').unlink(missing_ok=True)
         print('Repair packets sent. Reconnect Portal; verify its connection.')
+        return 0
+    if args.command == 'confirm-baseline':
+        # The other half of a baseline: somebody actually looked at the picture.
+        # Without this, "mutated session works" has no known-good comparison.
+        c = config(args.config)
+        try:
+            receipt = json.loads((runtime / 'auto-baseline.json').read_text())
+        except (OSError, ValueError):
+            raise RuntimeError('Run an unmodified baseline first; it relays Portal bytes and changes none.')
+        if receipt.get('fingerprint') != fingerprint(c):
+            raise RuntimeError('That baseline belongs to a different configuration or code version. Run baseline again.')
+        if not receipt.get('restored'):
+            raise RuntimeError('That baseline never verified its own restoration: %s' % (receipt.get('restoration_errors'),))
+        print(f"Baseline relayed {receipt.get('forwarded_out')} outbound Portal packets without changing any of them.")
+        print('That proves transport only. Only you can confirm the picture was normal.')
+        print('During that baseline the Portal must have shown picture and accepted controls.')
+        if input('Type CONFIRMED only if both were normal: ').strip() != 'CONFIRMED':
+            print('Not confirmed. Picture stays unverified and no profile was enabled.')
+            return 1
+        atomic_json(runtime / 'auto-baseline-confirmed.json', {'time': utc(), 'fingerprint': receipt['fingerprint'],
+                    'baseline_time': receipt.get('time'),
+                    'limit': 'Human observation of one device pair at one moment. Not a measurement, and it does not carry over after moving the Portal, the PS5, the adapter or changing this code.'})
+        print('Baseline confirmed for this configuration. You may now run an active profile.')
         return 0
     if args.command == 'verify-baseline':
         if not baseline_valid(config(args.config), runtime):

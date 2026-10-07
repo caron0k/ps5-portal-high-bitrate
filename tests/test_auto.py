@@ -57,7 +57,10 @@ class AutoTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td)
             self.assertFalse(a.baseline_valid(self.c,root))
-            a.atomic_json(root/'auto-baseline.json',{'fingerprint':a.fingerprint(self.c),'forwarded_out':3,'restored':True})
+            a.atomic_json(root/'auto-baseline.json',{'time':a.utc(),'fingerprint':a.fingerprint(self.c),'forwarded_out':3,'restored':True})
+            # Relayed bytes are one witness; a person has to confirm the picture too.
+            self.assertFalse(a.baseline_valid(self.c,root))
+            a.atomic_json(root/'auto-baseline-confirmed.json',{'time':a.utc(),'fingerprint':a.fingerprint(self.c)})
             self.assertTrue(a.baseline_valid(self.c,root))
             self.c['profile']='200'
             self.assertFalse(a.baseline_valid(self.c,root))

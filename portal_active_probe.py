@@ -38,8 +38,15 @@ def mutate(data):
                 b=pos+end//3*4
                 if b>len(data):return data,False
                 raw=bytearray(base64.b64decode(data[a:b],validate=True))
+                # A base64 window keeps its length only while the decoded block stays
+                # a multiple of three. Verify instead of assuming: a resized startup
+                # frame would be dropped by the console instead of answered, leaving
+                # the operator with a silent "no effect" instead of an error.
+                if len(raw)!=end-lo or OFFSET-lo+len(PATCH_DELTA)>len(raw):return data,False
                 for i,delta in enumerate(PATCH_DELTA):raw[OFFSET-lo+i]^=delta
-                return data[:a]+base64.b64encode(raw)+data[b:],True
+                patched=base64.b64encode(raw)
+                if len(patched)!=b-a:return data,False
+                return data[:a]+patched+data[b:],True
             pos+=size
     except (ValueError,IndexError): pass
     return data,False
@@ -186,7 +193,13 @@ def run(active, finish_on_high_target=False):
         if watcher and not errors:
             watcher.terminate();watcher.wait(timeout=3)
         if not errors:lock.unlink(missing_ok=True)
-        report={'mode':'candidate_byte_probe' if active else 'baseline','completed':completed,'candidate_plaintext_offset':OFFSET if active else None,'xor_mask':4 if active else None,'candidate_is_verified_portal_plaintext':False,'counts':dict(counts),'unique_mutated_sequences':len(seen),'ps5_messages':events,'udp_9296_mbps_by_second':{str(k):round(v*8/1e6,3) for k,v in sorted(rates.items())},'restoration_errors':errors,'sysctl_after':{k:network.sysread(k) for k in network.KEYS},'egress_witness':witness.report() if witness else None,'limits':['Candidate offset is a static template hypothesis, not decrypted Portal data.','Target bitrate is a console report, not a pure video throughput measure.','User-space relay latency/loss is not independently measured.']}
+        after={};identical=None
+        try:
+            after={k:network.sysread(k) for k in network.KEYS}
+            identical={k:after[k]==state['sysctl'][k] for k in network.KEYS}
+        except Exception as exc:
+            after['_read_error']=str(exc)
+        report={'mode':'candidate_byte_probe' if active else 'baseline','completed':completed,'candidate_plaintext_offset':OFFSET if active else None,'xor_mask':4 if active else None,'candidate_is_verified_portal_plaintext':False,'counts':dict(counts),'unique_mutated_sequences':len(seen),'ps5_messages':events,'udp_9296_mbps_by_second':{str(k):round(v*8/1e6,3) for k,v in sorted(rates.items())},'restoration_errors':errors,'sysctl_after':after,'sysctl_restored_identical':identical,'egress_witness':witness.report() if witness else None,'limits':['Candidate offset is a static template hypothesis, not decrypted Portal data.','Target bitrate is a console report, not a pure video throughput measure.','User-space relay latency/loss is not independently measured.']}
         report['xor_mask']=PATCH_DELTA[0] if active and len(PATCH_DELTA)==1 else None
         report['xor_bytes_hex']=PATCH_DELTA.hex() if active else None
         report['profile']=PROFILE_LABEL

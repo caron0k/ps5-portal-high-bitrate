@@ -10,6 +10,7 @@ case "${1:-help}" in
   ;;
  configure) sudo .venv/bin/python portal_auto.py configure --profile "${2:-65}" ;;
  baseline) sudo .venv/bin/python portal_auto.py baseline ;;
+ confirm-baseline) sudo .venv/bin/python portal_auto.py confirm-baseline ;;
  run) sudo .venv/bin/python portal_auto.py run ;;
  install) sudo .venv/bin/python service/install_linux.py ;;
  start)
@@ -30,5 +31,5 @@ case "${1:-help}" in
   sudo systemctl daemon-reload
   echo 'Service removed. Private files retained in /opt/portal-bitrate-auto and /var/lib/portal-bitrate-auto.'
   ;;
- *) echo 'Commands: setup, configure [65|100|200], baseline, run, install, start, stop, status, uninstall' ;;
+ *) echo 'Commands: setup, configure [65|100|200], baseline, confirm-baseline, run, install, start, stop, status, uninstall' ;;
 esac

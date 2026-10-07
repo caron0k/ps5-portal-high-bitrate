@@ -17,10 +17,11 @@
 3. 安装 [Npcap](https://npcap.com/#download),并启用 WinPcap API 兼容模式。需要的是普通以太网帧;**不要**开启 Wi-Fi 监听模式。本项目不捆绑 Npcap。若安装程序要求重启,请重启。
 4. 运行 `Setup-Windows.cmd`。它会创建 `.venv`、安装锁定版本的 Scapy 依赖并跑离线测试。如果 `py -3` 选中的是仅当前用户的 Python,请先用那个「所有用户」Python 的完整路径重建 `.venv`,再继续。
 5. 开启 PS5 和 Portal。右键 `Auto-Windows.cmd` → **以管理员身份运行**,输入 `Configure`,首次测试用档位 `65`。选择连接着你 PS5/Portal 所在局域网的那块以太网/Wi-Fi 网卡的**菜单编号**,然后输入两台设备的 IPv4 地址。网卡旁打印出来的本机 IP 仅供参考。较早的 preview.1 会要求输入网卡名/GUID:请填网卡名或完整的 Npcap 设备 ID,**绝不要**填本机 IP。它们的 MAC 地址只登记在本地。不要使用 VPN、访客网络或客户端隔离。
-6. 断开 Portal 的游戏会话。以管理员身份打开同一个菜单,选择 `Baseline`。出现 **BASELINE READY** 后连接 Portal,在 60 秒内检查画面和操控。这一步只转发、不改码率。只有当出站流量确实被转发且恢复完成时,才会保存一份回执。它不会自动验证视频或响应性。
-7. 若基线可用,选择 `Run` 做一次前台实测。出现 **AUTO READY** 后断开/重连 Portal。检查 Portal 的网络显示,并玩一段动态画面。用 Ctrl+C 停止,并等待恢复完成。**如果这一步失败,就不要安装计划任务。**
-8. 只有在上述测试都通过后才选择 `Install`。安装程序会要求你确认基线观察结果。它会把一份文件白名单复制到 `C:\ProgramData\PortalBitrateAuto` 下仅 Administrators/SYSTEM 可访问的目录,创建自己的虚拟环境,并在任务计划程序中以 SYSTEM 身份、开机触发注册 `PortalBitrateAutoPreview`。随后立即启动该任务。**不会保存任何账号密码或令牌。**
-9. 用 `Status` 同时检查任务计划程序和带时间戳的中继报告。再次断开/重连 Portal,然后重启电脑并重复一次,以验证无人值守启动。游戏期间请保持电脑不休眠。
+6. 断开 Portal 的游戏会话。以管理员身份打开同一个菜单,选择 `Baseline`。出现 **BASELINE READY** 后连接 Portal,在 60 秒内检查画面和操控。这一步只转发、不改码率。只有当出站流量确实被转发、且守护进程自己也报告已干净地把 ARP 交还回去时,才会保存一份回执。它不会自动验证视频或响应性。
+7. 接着选择 `Confirm-Baseline`。它会显示上一条基线转发了多少个**未做任何改动**的出站包,并要求你在确认当时画面与操控都正常后输入 `CONFIRMED`。**这是后面所有改写的前提**:若没人亲眼确认过基线状态,"改完之后能玩"就失去了对照意义。不输入即视为未确认,任何档位都不会被启用。
+8. 若基线已确认,选择 `Run` 做一次前台实测。出现 **AUTO READY** 后断开/重连 Portal。检查 Portal 的网络显示,并玩一段动态画面。用 Ctrl+C 停止,并等待恢复完成。**如果这一步失败,就不要安装计划任务。**
+9. 只有在上述测试都通过后才选择 `Install`。安装程序会要求你确认基线观察结果。它会把一份文件白名单复制到 `C:\ProgramData\PortalBitrateAuto` 下仅 Administrators/SYSTEM 可访问的目录,创建自己的虚拟环境,并在任务计划程序中以 SYSTEM 身份、开机触发注册 `PortalBitrateAutoPreview`。随后立即启动该任务。**不会保存任何账号密码或令牌。**
+10. 用 `Status` 同时检查任务计划程序和带时间戳的中继报告。再次断开/重连 Portal,然后重启电脑并重复一次,以验证无人值守启动。游戏期间请保持电脑不休眠。
 
 `Start`、`Stop`、`Status`、`Uninstall` 都在同一个管理员菜单里。`Stop` 会写入一个持久的停用标记,并等待优雅恢复。被停用的任务在重启后仍保持停用,直到执行 `Start`。`Uninstall` 会注销任务,但保留私有文件以便排查。**不要**强行结束正在运行的守护进程,也不要在恢复完成前删除文件。
 
@@ -41,9 +42,10 @@ sh Auto-Linux.sh configure 65
 configure 这一步会询问物理局域网网卡(例如 `eth0` 或 `enp3s0`)和两台设备的 IPv4 地址。用 `ip -br link` 和 `ip -br addr` 查你自己的。登记时两台设备都必须处于唤醒状态。
 
 1. 断开 Portal 的游戏会话。运行 `sh Auto-Linux.sh baseline`,出现 **BASELINE READY** 后再连接。在这 60 秒「不改包」的中继试用中检查画面和操控。
-2. 若可用,运行 `sh Auto-Linux.sh run`。出现 **AUTO READY** 后连接,检查 Portal 画面并开始游玩。Ctrl+C 会停止并修复它的 ARP 条目。
-3. **只有**在前台实测成功之后,才运行 `sh Auto-Linux.sh install`。它会要求你确认基线观察结果。安装会把 root 拥有的代码和 venv 放到 `/opt/portal-bitrate-auto`,私有运行时文件放到 `/var/lib/portal-bitrate-auto`,并注册一个名为 `portal-bitrate-auto` 的 systemd 服务。
-4. 用 `sh Auto-Linux.sh status` 检查。重连 Portal,然后重启 Linux,以验证在你的硬件上能自动启动。
+2. 亲眼确认画面与操控正常后,运行 `sh Auto-Linux.sh confirm-baseline` 并按提示输入 `CONFIRMED`。未确认则下一步会被拒绝:本分支认为,"产生了差分效应"必须相对于一个被人确认过的对照状态才有意义。
+3. 若可用,运行 `sh Auto-Linux.sh run`。出现 **AUTO READY** 后连接,检查 Portal 画面并开始游玩。Ctrl+C 会停止并修复它的 ARP 条目。
+4. **只有**在前台实测成功之后,才运行 `sh Auto-Linux.sh install`。它会要求你确认基线观察结果。安装会把 root 拥有的代码和 venv 放到 `/opt/portal-bitrate-auto`,私有运行时文件放到 `/var/lib/portal-bitrate-auto`,并注册一个名为 `portal-bitrate-auto` 的 systemd 服务。
+5. 用 `sh Auto-Linux.sh status` 检查。重连 Portal,然后重启 Linux,以验证在你的硬件上能自动启动。
 
 ```sh
 sh Auto-Linux.sh stop
